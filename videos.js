@@ -10,11 +10,10 @@
   - featured: true shows it on the home page too (keep it to 6 for a neat grid).
   Remember: the Drive file must be shared as "Anyone with the link".
 */
-/* AUTOMATIC MODE (optional): paste a free Google API key below and every video in the
-   Drive folder shows up on the "All videos" page by itself. See README.md for the 5-minute setup.
-   Without a key, the page shows the list below. */
+/* AUTOMATIC MODE is on: any video added to the Google Drive "Portfolio" folder shows up on the
+   website by itself within about 3 hours (or instantly via Actions → "Run workflow" on GitHub).
+   The blocks below only add nicer titles, categories and descriptions for chosen videos. */
 window.DRIVE_FOLDER_ID = "1f59ZPGWwmH0gVUBg6hEENthW0sld02fu";
-window.DRIVE_API_KEY = "";
 
 window.CATEGORIES = ["Brand & Corporate", "Product Ads", "AI Explainers", "Motion & Logo", "More Work", "Viral AI Reels"];
 

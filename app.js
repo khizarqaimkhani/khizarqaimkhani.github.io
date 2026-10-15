@@ -53,42 +53,32 @@
     if (b) open(VIDEOS[+b.dataset.i]);
   });
 
-  /* automatic mode: read every video in the Drive folder */
+  /* automatic mode: drive.json is rebuilt from the Google Drive folder every few hours */
   async function loadDrive(){
-    const key = window.DRIVE_API_KEY, folder = window.DRIVE_FOLDER_ID;
-    if (!key || !folder) return;
-    const q = encodeURIComponent(`'${folder}' in parents and mimeType contains 'video/' and trashed = false`);
-    const fields = encodeURIComponent('files(id,name,thumbnailLink,createdTime,videoMediaMetadata(width,height,durationMillis))');
-    const url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=${fields}&orderBy=createdTime desc&pageSize=200&key=${key}`;
     try {
-      const res = await fetch(url);
+      const res = await fetch('drive.json', {cache: 'no-store'});
       if (!res.ok) return;
-      const files = (await res.json()).files || [];
-      const known = new Map(VIDEOS.filter(v => v.drive).map(v => [v.drive, v]));
-      const fresh = files.filter(f => !known.has(f.id)).map(f => {
-        const m = f.videoMediaMetadata || {};
-        const secs = Math.round((m.durationMillis || 0) / 1000);
-        const raw = f.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim();
-        return {
-          title: /^whatsapp video|^\d+$|^vid/i.test(raw) ? 'New project' : raw,
-          category: 'More Work',
-          format: (m.width && m.height && m.width > m.height) ? '16:9' : '9:16',
-          duration: secs ? `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}` : '',
-          about: '',
-          drive: f.id,
-          poster: f.thumbnailLink ? f.thumbnailLink.replace(/=s\d+$/, '=s800') : ''
-        };
-      });
-      const listed = VIDEOS.filter(v => v.drive && files.some(f => f.id === v.drive));
+      const data = await res.json();
+      const files = data.files || [];
+      if (!data.ok || !files.length) return;
+      const known = new Set(VIDEOS.filter(v => v.drive).map(v => v.drive));
+      const fresh = files.filter(f => !known.has(f.id))
+        .sort((x, y) => (y.first_seen || '').localeCompare(x.first_seen || ''))
+        .map(f => ({
+          id: f.id, title: f.title, category: 'More Work', format: f.format || '9:16',
+          about: '', drive: f.id, poster: f.poster || '', isNew: true
+        }));
+      const inDrive = new Set(files.map(f => f.id));
+      const listed = VIDEOS.filter(v => v.drive && inDrive.has(v.drive));
       const reels = VIDEOS.filter(v => !v.drive);
-      VIDEOS = [...listed, ...fresh, ...reels];
+      VIDEOS = [...fresh, ...listed, ...reels];
     } catch (e) { /* keep the list from videos.js */ }
   }
 
   function start(){
     /* home page: featured grid + counts */
     const featured = document.getElementById('featured');
-    if (featured) render(featured, VIDEOS.filter(v => v.featured));
+    if (featured) render(featured, VIDEOS.filter(v => v.isNew || v.featured).slice(0, 6));
     document.querySelectorAll('[data-count]').forEach(el => { el.textContent = VIDEOS.length; });
 
     /* all-videos page: filters */
